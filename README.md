@@ -6,3 +6,5 @@
 
 
 Companion app to enable Cerulean Sonar devices to share their data with other hosts and services, such as QGroundControl or a BlueROV2. 
+
+[Docs](https://ceruleansonar.github.io/Cerulean-Companion/)
