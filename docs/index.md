@@ -10,6 +10,9 @@ Companion app to enable Cerulean Sonar devices to share their data with other ho
 
 <br/>
 <br/>
+<br/>
+<br/>
+<br/>
 
 
 ## Installing:
