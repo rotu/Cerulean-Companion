@@ -8,6 +8,10 @@
 Companion app to enable Cerulean Sonar devices to share their data with other hosts and services, such as QGroundControl or a BlueROV2.
 
 
+<br/>
+<br/>
+
+
 ## Installing:
 
 With python3.6 or later, the following command will install all dependencies locally:
