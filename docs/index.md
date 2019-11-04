@@ -83,7 +83,8 @@ Run `cerulean-companion` in a terminal with the settings you determined in the p
 $ ./cerulean-companion -u /dev/ttyUSB0 -g /dev/ttyACM0 -e localhost:14401 -m 192.168.2.2:27000
 ```
 
-If all has gone well, you should see your location as well as your ROV in QGroundControl's map display
+If all has gone well, you should see your location as well as your ROV in QGroundControl's map display:
+
 ![qgc_map](https://raw.githubusercontent.com/CeruleanSonar/Cerulean-Companion/master/docs/images/qgc_rov.jpg "QGC Map")
 
 
