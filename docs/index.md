@@ -16,7 +16,22 @@ Companion app to enable Cerulean Sonar devices to share their data with other ho
 <br/>
 
 
-## Installing:
+## Installing
+
+### From a Release
+
+Head over to [Releases](https://github.com/CeruleanSonar/Cerulean-Companion/releases) and download the appropriate version for your OS. 
+
+For now, the app is CLI only. Use terminal on Linux/Mac and CMD on Windows. Follow the help prompt to set the flags appropriately for your configuration. 
+
+```
+$ cerulean-companion
+usage: usbl_relay [-h] [-u /dev/ttyUSB#] [-g /dev/ttyXXX#] [-e localhost:port]
+                  [-m host:port] [--log level]
+
+```
+
+### From PIP
 
 With python3.6 or later, the following command will install all dependencies locally:
 ```
@@ -26,7 +41,7 @@ Note the `--force-reinstall` flag. This is required if you already have `pynmea2
 
 You should then be able to run the command:
 ```
-$ usbl_relay
+$ cerulean-companion
 usage: usbl_relay [-h] [-u /dev/ttyUSB#] [-g /dev/ttyXXX#] [-e localhost:port]
                   [-m host:port] [--log level]
 usbl_relay: error: GPS and USBL devices must be specified
