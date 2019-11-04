@@ -6,10 +6,10 @@ import time
 from bluerov2_usbl.usbl_relay_controller import list_serial_ports, USBLController
 
 parser = argparse.ArgumentParser(
-    description='Cerulean USBL Relay: Listen for GPS absolute position data of a base station '
-                'and relative position data from that base station to a transponder. Relay the '
-                'GPS data unchanged to an echo receiver and compute the absolute position data '
-                'to the transponder. ')
+    description='Cerulean companion: Listen for a GPS position of a base station '
+                'and relative position data from that base station to the ROVL Transmitter. Relay the '
+                'GPS data unchanged to QGroundControl and compute the absolute position data '
+                'to the ROVL Transmitter. ')
 
 parser.add_argument(
     '-r', '--rovl', help="Port of the ROVL Receiver", type=str,
@@ -39,8 +39,8 @@ def get_serial_device_summary():
 
 args = parser.parse_args()
 
-if args.usbl is None or args.gps is None:
-    parser.error("GPS and USBL devices must be specified\n\n" + get_serial_device_summary())
+if args.rovl is None or args.gps is None:
+    parser.error("GPS and ROVL devices must be specified\n\n" + get_serial_device_summary())
 
 logging.basicConfig(
     level=args.log.upper(),
@@ -49,7 +49,7 @@ logging.basicConfig(
 
 c = USBLController()
 c.set_change_callback(lambda key, value: logging.info(f'{key} is now {value}'))
-c.dev_usbl = args.usbl
+c.dev_rovl = args.rovl
 c.dev_gps = args.gps
 c.addr_echo = args.echo
 c.addr_mav = args.mav
