@@ -26,7 +26,7 @@ For Linux, you'll need to enable execution of the file with your file manager, o
 
 ```
 $ ./cerulean-companion
-usage: cerulean-companion [-h] [-u /dev/ttyUSB#] [-g /dev/ttyXXX#] [-e localhost:port]
+usage: cerulean-companion [-h] [-r /dev/ttyUSB#] [-g /dev/ttyXXX#] [-e localhost:port]
                   [-m host:port] [--log level]
 
 ```
@@ -80,7 +80,7 @@ $ sudo -s
 Run `cerulean-companion` in a terminal with the settings you determined in the previous step, it should look something like this:
 
 ```
-$ ./cerulean-companion -u /dev/ttyUSB0 -g /dev/ttyACM0 -e localhost:14401 -m 192.168.2.2:27000
+$ ./cerulean-companion -r /dev/ttyUSB0 -g /dev/ttyACM0 -e localhost:14401 -m 192.168.2.2:27000
 ```
 
 If all has gone well, you should see your location as well as your ROV in QGroundControl's map display:
@@ -105,7 +105,7 @@ Note the `--force-reinstall` flag. This is required if you already have `pynmea2
 You should then be able to run the command:
 ```
 $ cerulean-companion
-usage: cerulean-companion [-h] [-u /dev/ttyUSB#] [-g /dev/ttyXXX#] [-e localhost:port]
+usage: cerulean-companion [-h] [-r /dev/ttyUSB#] [-g /dev/ttyXXX#] [-e localhost:port]
                   [-m host:port] [--log level]
 cerulean-companion: error: GPS and USBL devices must be specified
 
