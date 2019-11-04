@@ -12,16 +12,16 @@ parser = argparse.ArgumentParser(
                 'to the transponder. ')
 
 parser.add_argument(
-    '-u', '--usbl', help="Port of the usbl device", type=str,
+    '-r', '--rovl', help="Port of the ROVL Receiver", type=str,
     metavar='COM#' if os.name == 'nt' else '/dev/ttyUSB#', required=False)
 parser.add_argument(
-    '-g', '--gps', help='Port of the gps device', type=str,
+    '-g', '--gps', help='Port of the GPS device', type=str,
     metavar='COM#' if os.name == 'nt' else '/dev/ttyXXX#', required=False)
 parser.add_argument(
     '-e', '--echo', help='UDP Address to pass GPS data through',
-    metavar='localhost:port', required=False)
+    metavar='localhost:14401', required=False)
 parser.add_argument(
-    '-m', '--mav', help='UDP Address to send amended GPS data to', metavar='host:port',
+    '-m', '--mav', help='UDP Address to send amended GPS data to', metavar='192.168.2.2:27000',
     required=False)
 parser.add_argument(
     '--log', '-l', metavar='level', default='info',
