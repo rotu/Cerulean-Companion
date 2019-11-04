@@ -39,7 +39,7 @@ def get_serial_device_summary():
 
 args = parser.parse_args()
 
-if args.usbl is None or args.gps is None:
+if args.rovl is None or args.gps is None:
     parser.error("GPS and ROVL devices must be specified\n\n" + get_serial_device_summary())
 
 logging.basicConfig(
@@ -49,7 +49,7 @@ logging.basicConfig(
 
 c = USBLController()
 c.set_change_callback(lambda key, value: logging.info(f'{key} is now {value}'))
-c.dev_usbl = args.usbl
+c.dev_rovl = args.rovl
 c.dev_gps = args.gps
 c.addr_echo = args.echo
 c.addr_mav = args.mav
