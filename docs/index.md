@@ -18,11 +18,11 @@ Companion app to enable Cerulean Sonar devices to share their data with other ho
 
 ## Installing a Release
 
-Head over to [Releases](https://github.com/CeruleanSonar/Cerulean-Companion/releases) and download the appropriate version for your OS. 
+Head over to [Releases](https://github.com/CeruleanSonar/Cerulean-Companion/releases) and download the appropriate version for your OS.
 
-For now, the app is CLI only. Use terminal on Linux/Mac and CMD on Windows to execute the program. Follow the help prompt to set the flags appropriately for your configuration. 
+For now, the app is CLI only. Use terminal on Linux/Mac and CMD on Windows to execute the program. Follow the help prompt to set the flags appropriately for your configuration.
 
-For Linux, you'll need to enable execution of the file with your file manager, or by running `chmod +x cerulean-companion` . In Windows 10, you may need to approve a SmartScreen dialog. 
+For Linux, you'll need to enable execution of the file with your file manager, or by running `chmod +x cerulean-companion` . In Windows 10, you may need to approve a SmartScreen dialog.
 
 ```
 $ ./cerulean-companion
@@ -42,7 +42,7 @@ usage: cerulean-companion [-h] [-u /dev/ttyUSB#] [-g /dev/ttyXXX#] [-e localhost
 
 ### Start and Configure QGroundControl
 
-Because of the way QGroundControl handles USB devices, we'll have to disable its auto-connect functionality for everything except UDP. If we don't do this, the Cerulean Companion (or anything else) will be unable to interact with serial ports while QGroundControl is open. This won't have any effect on the way a BlueROV2 operates. 
+Because of the way QGroundControl handles USB devices, we'll have to disable its auto-connect functionality for everything except UDP. If we don't do this, the Cerulean Companion (or anything else) will be unable to interact with serial ports while QGroundControl is open. This won't have any effect on the way a BlueROV2 operates.
 
 We also want to switch the NMEA GPS Device to "UDP Port" and leave it on 14401.
 
@@ -67,7 +67,7 @@ At this point, you may want to allow your GPS some time to acquire a lock, and p
 
 ### Sync the ROVL Receiver and Transmitter
 
-This is a good time to sync the ROVL Receiver and Transmitter using the supplied software, or by sending it `D0` when the devices are touching. 
+This is a good time to sync the ROVL Receiver and Transmitter using the supplied software, or by sending it `D0` when the devices are touching.
 
 On Linux:
 ```
@@ -122,6 +122,6 @@ To package it up for consumption on another machine:
 git clone https://github.com/CeruleanSonar/Cerulean-Companion.git
 cd Cerulean-Companion
 pip3 install pyinstaller git+https://github.com/CeruleanSonar/Cerulean-Companion.git -t build
-env PYTHONPATH="build" python3 -m PyInstaller usbl_relay.spec
+env PYTHONPATH="build" python3 -m PyInstaller cerulean-companion.spec
 ```
 You will find the executable file in the `dist` subfolder.
