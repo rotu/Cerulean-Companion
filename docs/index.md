@@ -33,6 +33,13 @@ usage: cerulean-companion [-h] [-u /dev/ttyUSB#] [-g /dev/ttyXXX#] [-e localhost
 
 ## Getting ROVL and GPS data into QGroundControl on a BlueROV2
 
+### Requirements
+
+* ROVL Receiver and Transmitter
+* USB GPS [Such as this](https://smile.amazon.com/HiLetgo-G-Mouse-GLONASS-Receiver-Windows/dp/B01MTU9KTF/ref=sr_1_4?keywords=usb+gps&qid=1572829299&sr=8-4)
+* QGroundControl >= 3.5.2
+* BlueROV2 with a recent version of Companion [How to Update](https://discuss.bluerobotics.com/t/software-updates/1128)
+
 ### Start and Configure QGroundControl
 
 Because of the way QGroundControl handles USB devices, we'll have to disable its auto-connect functionality for everything except UDP. If we don't do this, the Cerulean Companion (or anything else) will be unable to interact with serial ports while QGroundControl is open. This won't have any effect on the way a BlueROV2 operates. 
