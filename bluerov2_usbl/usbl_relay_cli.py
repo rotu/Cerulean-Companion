@@ -18,10 +18,10 @@ parser.add_argument(
     '-g', '--gps', help='Port of the GPS device', type=str,
     metavar='COM#' if os.name == 'nt' else '/dev/ttyXXX#', required=False)
 parser.add_argument(
-    '-e', '--echo', help='UDP Address to pass GPS data through',
+    '-e', '--echo', help='UDP Address to pass GPS data to',
     metavar='localhost:14401', required=False)
 parser.add_argument(
-    '-m', '--mav', help='UDP Address to send amended GPS data to', metavar='192.168.2.2:27000',
+    '-m', '--mav', help='UDP Address to send ROVL position to', metavar='192.168.2.2:27000',
     required=False)
 parser.add_argument(
     '--log', '-l', metavar='level', default='info',
