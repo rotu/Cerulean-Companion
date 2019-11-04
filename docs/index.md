@@ -121,7 +121,7 @@ To package it up for consumption on another machine:
 ```
 git clone https://github.com/CeruleanSonar/Cerulean-Companion.git
 cd Cerulean-Companion
-pip3 install pyinstaller git+https://github.com/CeruleanSonar/Cerulean-Companion.git -t build
+pip3 install pyinstaller ./ -t build
 env PYTHONPATH="build" python3 -m PyInstaller cerulean-companion.spec
 ```
 You will find the executable file in the `dist` subfolder.
