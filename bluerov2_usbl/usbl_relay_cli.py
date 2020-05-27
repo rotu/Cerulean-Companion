@@ -49,7 +49,7 @@ logging.basicConfig(
 
 c = USBLController()
 c.set_change_callback(lambda key, value: logging.info(f'{key} is now {value}'))
-c.dev_rovl = args.rovl
+c.dev_usbl = args.rovl
 c.dev_gps = args.gps
 c.addr_echo = args.echo
 c.addr_mav = args.mav
