@@ -19,7 +19,7 @@ parser.add_argument(
     metavar='COM#' if os.name == 'nt' else '/dev/ttyXXX#', required=False)
 parser.add_argument(
     '-e', '--echo', help='UDP Address to pass GPS data to',
-    metavar='localhost:14401', required=False)
+    metavar='127.0.0.1:14401', required=False)
 parser.add_argument(
     '-m', '--mav', help='UDP Address to send ROVL position to', metavar='192.168.2.2:27000',
     required=False)
