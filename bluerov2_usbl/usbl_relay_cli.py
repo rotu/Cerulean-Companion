@@ -1,7 +1,10 @@
-import argparse
+from gooey import GooeyParser
+
 import logging
 import os
 import time
+
+from serial.tools.list_ports_common import ListPortInfo
 
 from bluerov2_usbl.usbl_relay_controller import list_serial_ports, USBLController
 
@@ -15,23 +18,30 @@ def get_serial_device_summary():
     return '\r\n'.join(result)
 
 def main():
-    parser = argparse.ArgumentParser(
+    parser = GooeyParser(
             description='Cerulean companion: Listen for a GPS position of a base station '
                         'and relative position data from that base station to the ROVL Transmitter. Relay the '
                         'GPS data unchanged to QGroundControl and compute the absolute position data '
                         'to the ROVL Transmitter. ')
 
     parser.add_argument(
-        '-r', '--rovl', help="Port of the ROVL Receiver", type=str,
-        metavar='COM#' if os.name == 'nt' else '/dev/ttyUSB#', required=False)
+        '-r', '--rovl', help="Port of the ROVL Receiver",
+        choices=[str(p.device) for p in list_serial_ports()],
+        widget='Dropdown',
+        metavar='ROVL',
+        required=True)
     parser.add_argument(
-        '-g', '--gps', help='Port of the GPS device', type=str,
-        metavar='COM#' if os.name == 'nt' else '/dev/ttyXXX#', required=False)
+        '-g', '--gps', help='Port of the GPS device',
+        choices=[str(p.device) for p in list_serial_ports()],
+        widget='Dropdown',
+        metavar='GPS',
+        required=True)
+
     parser.add_argument(
-        '-e', '--echo', help='UDP Address to pass GPS data to',
-        metavar='127.0.0.1:14401', required=False)
+        '-e', '--echo', help='UDP Address to pass GPS data to', metavar="echo address",
+     default='127.0.0.1:14401', required=False)
     parser.add_argument(
-        '-m', '--mav', help='UDP Address to send ROVL position to', metavar='192.168.2.2:27000',
+        '-m', '--mav', help='UDP Address to send ROVL position to', metavar='MAV address', default='192.168.2.2:27000',
         required=False)
     parser.add_argument(
         '--log', '-l', metavar='level', default='info',
@@ -47,7 +57,6 @@ def main():
         level=args.log.upper(),
         format='%(threadName)-5s %(levelname)-8s %(message)s'
     )
-
     c = USBLController()
     c.set_change_callback(lambda key, value: logging.info(f'{key} is now {value}'))
     c.dev_usbl = args.rovl
