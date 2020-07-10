@@ -1,14 +1,11 @@
-pynmea2
+/build/
+/dist/
 
-build
+__pycache__/
 
-dist
-
-bluerov2_usbl/__pycache__
-
-.idea
-
+.idea/
 
 *.egg-info/
 
-.venv/
+/.venv/
+/venv/

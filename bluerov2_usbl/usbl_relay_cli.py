@@ -25,14 +25,14 @@ def main():
                         'to the ROVL Transmitter. ')
 
     parser.add_argument(
-        '-r', '--rovl', help="Port of the ROVL Receiver",
-        choices=[str(p.device) for p in list_serial_ports()],
+        '--rovl','-r', help="Port of the ROVL Receiver",
+        choices=[],
         widget='Dropdown',
         metavar='ROVL',
         required=True)
     parser.add_argument(
-        '-g', '--gps', help='Port of the GPS device',
-        choices=[str(p.device) for p in list_serial_ports()],
+        '--gps','-g', help='Port of the GPS device',
+        choices=[],
         widget='Dropdown',
         metavar='GPS',
         required=True)
