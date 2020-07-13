@@ -49,7 +49,8 @@ def main():
     output.add_argument(
         '--log', '-l', metavar='level', default='info',
         choices=['error', 'warning', 'info', 'debug'],
-        help='How verbose should we be?')
+        help='How verbose should we be?',
+        gooey_options={'visible': False})
 
     args = parser.parse_args()
 
