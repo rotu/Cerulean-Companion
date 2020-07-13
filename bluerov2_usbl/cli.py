@@ -1,13 +1,9 @@
-from gooey import GooeyParser
-
 import logging
-import os
 import time
 
-from serial.tools.list_ports_common import ListPortInfo
+from gooey import GooeyParser
 
 from bluerov2_usbl.usbl_relay_controller import list_serial_ports, USBLController
-
 
 
 def get_serial_device_summary():
@@ -17,33 +13,40 @@ def get_serial_device_summary():
     ]
     return '\r\n'.join(result)
 
+
 def main():
     parser = GooeyParser(
-            description='Cerulean companion: Listen for a GPS position of a base station '
-                        'and relative position data from that base station to the ROVL Transmitter. Relay the '
-                        'GPS data unchanged to QGroundControl and compute the absolute position data '
-                        'to the ROVL Transmitter. ')
-
-    parser.add_argument(
-        '--rovl','-r', help="Port of the ROVL Receiver",
-        choices=[],
+        description='Listen for a GPS position of a base station '
+                    'and relative position data from that base station to the ROVL Transmitter. Relay the '
+                    'GPS data unchanged to QGroundControl and compute the absolute position data '
+                    'to the ROVL Transmitter. ')
+    devices = parser.add_argument_group('Input')
+    devices.add_argument(
+        '--rovl', '-r', help="Port of the ROVL Receiver",
         widget='Dropdown',
         metavar='ROVL',
         required=True)
-    parser.add_argument(
-        '--gps','-g', help='Port of the GPS device',
-        choices=[],
+    devices.add_argument(
+        '--gps', '-g', help='Port of the GPS device',
         widget='Dropdown',
         metavar='GPS',
         required=True)
+    devices.add_argument(
+        '-b', '--baud', help='Baud rate of the GPS device',
+        type=int,
+        widget='Dropdown',
+        metavar='BAUD',
+        default=9600,
+        choices=[1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200])
 
-    parser.add_argument(
-        '-e', '--echo', help='UDP Address to pass GPS data to', metavar="echo address",
-     default='127.0.0.1:14401', required=False)
-    parser.add_argument(
+    output = parser.add_argument_group('output')
+    output.add_argument(
+        '-e', '--echo', help='UDP Address to repeat GPS data to', metavar="echo address",
+        default='127.0.0.1:14401', required=False)
+    output.add_argument(
         '-m', '--mav', help='UDP Address to send ROVL position to', metavar='MAV address', default='192.168.2.2:27000',
         required=False)
-    parser.add_argument(
+    output.add_argument(
         '--log', '-l', metavar='level', default='info',
         choices=['error', 'warning', 'info', 'debug'],
         help='How verbose should we be?')
@@ -66,6 +69,7 @@ def main():
 
     while True:
         time.sleep(0.1)
+
 
 if __name__ == '__main__':
     main()
