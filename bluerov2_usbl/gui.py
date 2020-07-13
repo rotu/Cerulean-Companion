@@ -25,7 +25,8 @@ if __name__ == '__main__':
             force_stop_is_error=False,
             show_stop_warning=False,
             show_success_modal=False,
-            show_failure_modal=False
+            show_failure_modal=False,
+            program_description='Fuse GPS and USBL data',
         )
 
         gooey_main()
