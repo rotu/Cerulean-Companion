@@ -1,5 +1,7 @@
 import logging
+import sys
 import time
+from argparse import RawDescriptionHelpFormatter
 
 from gooey import GooeyParser
 
@@ -19,7 +21,12 @@ def main():
         description='Listen for a GPS position of a base station '
                     'and relative position data from that base station to the ROVL Transmitter. Relay the '
                     'GPS data unchanged to QGroundControl and compute the absolute position data '
-                    'to the ROVL Transmitter. ')
+                    'to the ROVL Transmitter. ',
+
+        formatter_class=RawDescriptionHelpFormatter,
+        epilog=get_serial_device_summary(),
+    )
+
     devices = parser.add_argument_group('Input')
     devices.add_argument(
         '--rovl', '-r', help="Port of the ROVL Receiver",
@@ -52,10 +59,11 @@ def main():
         help='How verbose should we be?',
         gooey_options={'visible': False})
 
-    args = parser.parse_args()
+    if len(sys.argv) < 2:
+        parser.print_usage()
+        sys.exit(1)
 
-    if args.rovl is None or args.gps is None:
-        parser.error("GPS and ROVL devices must be specified\n\n" + get_serial_device_summary())
+    args = parser.parse_args()
 
     logging.basicConfig(
         level=args.log.upper(),

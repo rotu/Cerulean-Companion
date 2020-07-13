@@ -1,6 +1,7 @@
 import sys
 
-if __name__ == '__main__':
+
+def main():
     if 'gooey-seed-ui' in sys.argv:
         import json
         from bluerov2_usbl.usbl_relay_controller import list_serial_ports
@@ -19,7 +20,7 @@ if __name__ == '__main__':
         gooey_main = gooey.Gooey(
             bluerov2_usbl.cli.main,
             poll_external_updates=True,
-            image_dir=pkg_resources.resource_filename(__name__, 'resources/gooey_image_dir'),
+            image_dir=pkg_resources.resource_filename('bluerov2_usbl', 'resources/gooey_image_dir'),
             header_bg_color='#1dacd6',
             program_name='Cerulean Companion',
             force_stop_is_error=False,
@@ -30,3 +31,7 @@ if __name__ == '__main__':
         )
 
         gooey_main()
+
+
+if __name__ == '__main__':
+    main()
