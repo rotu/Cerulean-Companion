@@ -1,5 +1,4 @@
 import logging
-import sys
 import time
 from argparse import RawDescriptionHelpFormatter
 
@@ -27,7 +26,7 @@ def main():
         epilog=get_serial_device_summary(),
     )
 
-    devices = parser.add_argument_group('Input')
+    devices = parser.add_argument_group('input')
     devices.add_argument(
         '--rovl', '-r', help="Port of the ROVL Receiver",
         widget='Dropdown',
@@ -39,7 +38,7 @@ def main():
         metavar='GPS',
         required=True)
     devices.add_argument(
-        '-b', '--baud', help='Baud rate of the GPS device',
+        '--baud', '-b', help='Baud rate of the GPS device',
         type=int,
         widget='Dropdown',
         metavar='BAUD',
@@ -48,20 +47,16 @@ def main():
 
     output = parser.add_argument_group('output')
     output.add_argument(
-        '-e', '--echo', help='UDP Address to repeat GPS data to', metavar="echo address",
+        '--echo', '-e', help='UDP Address to repeat GPS data to', metavar="echo address",
         default='127.0.0.1:14401', required=False)
     output.add_argument(
-        '-m', '--mav', help='UDP Address to send ROVL position to', metavar='MAV address', default='192.168.2.2:27000',
+        '--mav', '-m', help='UDP Address to send ROVL position to', metavar='MAV address', default='192.168.2.2:27000',
         required=False)
     output.add_argument(
         '--log', '-l', metavar='level', default='info',
         choices=['error', 'warning', 'info', 'debug'],
         help='How verbose should we be?',
         gooey_options={'visible': False})
-
-    if len(sys.argv) < 2:
-        parser.print_usage()
-        sys.exit(1)
 
     args = parser.parse_args()
 
