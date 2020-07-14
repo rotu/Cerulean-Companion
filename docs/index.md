@@ -102,13 +102,39 @@ If you have issues, check the output of `cerulean-companion` in the terminal
 
 ## Advanced Usage
 
-### Installing From PIP
+### Installing from pip
 
-With python3.6 or later, the following command will install all dependencies locally:
-```
-pip3 install --user --force-reinstall git+https://github.com/CeruleanSonar/Cerulean-Companion.git
-```
-Note the `--force-reinstall` flag. This is required if you already have `pynmea2` installed to get our custom modified branch.
+1. Make sure you have python 3.6 or later and pip.
+
+   * On Ubuntu, you may need multiple packages `apt install python3 python3-pip python3-dev`
+
+2. Make sure you have a reasonably up-to-date version of the packaging tools:
+
+   ```python3 -m pip install --upgrade pip setuptools wheel```
+
+3. Install wxpython:
+
+   * On Mac or Windows, ```python3 -m pip install --upgrade wxPython```
+
+   * On Linux, wxPython is a bit of a bear to build, so you may want to install via your package manager:
+
+     ```
+     sudo apt install python3-wxgtk4.0
+     ```
+
+   * If there is no appropriate package manager package, you can hint to `pip` where to find a prebuild version; e.g. on Ubuntu 20.04:
+
+     ```
+     python3 -m pip install --upgrade wxPython --find-links https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-20.04
+     ```
+
+4. Install cerulean companion and remaining dependencies:
+
+   ```
+   python3 -m pip install --user --force-reinstall git+https://github.com/CeruleanSonar/Cerulean-Companion.git
+   ```
+
+   Note the `--force-reinstall` flag. This is required if you already have `pynmea2` installed to get our custom modified branch.
 
 You should then be able to run the command:
 ```
@@ -122,15 +148,24 @@ Serial devices detected:
   /dev/cu.DansCans-SPPDev - n/a
 ```
 
+or 
+
+```
+$ cerulean-companion-gui
+```
 
 ### Building for distribution:
 
-To package it up for consumption on another machine:
+To package it up for consumption on another machine, you should use an isolated virtual environment:
+
 ```
 git clone https://github.com/CeruleanSonar/Cerulean-Companion.git
 cd Cerulean-Companion
-pip3 install pyinstaller ./ -t build
-env PYTHONPATH="build" python3 -m PyInstaller build.spec
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip setuptools wheel pyinstaller
+python3 -m pip install .
+python3 -m PyInstaller build.spec
 ```
-You will find the executable file in the `dist` subfolder.
+You will find the executable files in the `dist` subfolder.
 
