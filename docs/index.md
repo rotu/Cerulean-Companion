@@ -20,7 +20,9 @@ Companion app to enable Cerulean Sonar devices to share their data with other ho
 
 Head over to [Releases](https://github.com/CeruleanSonar/Cerulean-Companion/releases) and download the appropriate version for your OS.
 
-For now, the app is CLI only. Use terminal on Linux/Mac and CMD on Windows to execute the program. Follow the help prompt to set the flags appropriately for your configuration.
+There are two versions of the app: a command line `cerulean-companion` and a graphical interface `cerulean-companion-gui`.
+
+Use terminal on Linux/Mac and CMD on Windows to execute the program. Follow the help prompt to set the flags appropriately for your configuration.
 
 For Linux, you'll need to enable execution of the file with your file manager, or by running `chmod +x cerulean-companion` . In Windows 10, you may need to approve a SmartScreen dialog.
 
@@ -30,6 +32,8 @@ usage: cerulean-companion [-h] [-r /dev/ttyUSB#] [-g /dev/ttyXXX#] [-e localhost
                   [-m host:port] [--log level]
 
 ```
+
+![gui_screenshot](/home/dan/Documents/Cerulean-Companion/docs/images/gui_screenshot.png)
 
 ## Getting ROVL and GPS data into QGroundControl on a BlueROV2
 
@@ -126,6 +130,7 @@ To package it up for consumption on another machine:
 git clone https://github.com/CeruleanSonar/Cerulean-Companion.git
 cd Cerulean-Companion
 pip3 install pyinstaller ./ -t build
-env PYTHONPATH="build" python3 -m PyInstaller cerulean-companion.spec
+env PYTHONPATH="build" python3 -m PyInstaller build.spec
 ```
 You will find the executable file in the `dist` subfolder.
+
