@@ -26,11 +26,8 @@ class Api:
         ## in pywebview, return values from Python don't work reliably
         # return getattr(usbl_controller, attr)
 
-    def get_serial_devices(self, _):
-        try:
-            return [cp.device for cp in list_serial_ports()]
-        except Exception as e:
-            add_to_log('error', str(e))
+    def get_serial_devices(self):
+        return [cp.device for cp in list_serial_ports()]
 
 
 window = webview.create_window('USBL controller', url='web/main.html', js_api=Api())

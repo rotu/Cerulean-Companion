@@ -1,9 +1,8 @@
 pynmea2
-
 build
-
 dist
-
-bluerov2_usbl/__pycache__
-
+__pycache__
 .idea
+*.egg-info/
+.venv/
+.eggs/
