@@ -1,8 +1,8 @@
-#!/usr/bin/python3
 import json
 import logging
 from functools import wraps
 
+import pkg_resources
 import webview
 
 from bluerov2_usbl.usbl_relay_controller import USBLController, list_serial_ports
@@ -23,18 +23,16 @@ class Api:
         except Exception as e:
             logger.error(str(e))
 
-        ## in pywebview, return values from Python don't work reliably
-        # return getattr(usbl_controller, attr)
-
     def get_serial_devices(self):
         return [cp.device for cp in list_serial_ports()]
 
 
-window = webview.create_window('USBL controller', url='web/main.html', js_api=Api())
+main_html = pkg_resources.resource_filename('bluerov2_usbl', 'web/main.html')
+window = webview.create_window('USBL controller', url=main_html, js_api=Api())
 
 
 def js_function(stub: callable):
-    """Decorator for a function whose implementation actually lives in Python"""
+    """Decorator for a function callable from Python whose implementation actually lives in Javascript"""
 
     @wraps(stub)
     def wrapper(*args, **kwargs):
