@@ -45,20 +45,27 @@
         height: 100%;
       }
     </style>
-    <datalist id="serial_ports">
-      <option label="/dev/ttyACM0 - J-Link - CDC" value="/dev/ttyACM0" ></option>
-    </datalist>
 
   </head>
   <body>
-    <div id="main">
+  <datalist id="serial_ports">
+    <option label="/dev/ttyACM0 - J-Link - CDC" value="/dev/ttyACM0" ></option>
+  </datalist>
+  <datalist id="baudrates">
+    <option value="9600"></option>
+    <option value="57600"></option>
+  </datalist>
+
+  <div id="main">
       <div>
         <h2>devices</h2>
         <table id="control_grid">
           <tr>
             <td><label>GPS port</label></td>
-            <td><input type="text" list="serial_ports" id="sel_dev_gps"/>
-              <input type="number" id="baud" value ='9600' min="1" max="115200"> bit/s</td>
+            <td>
+              <input type="text" list="serial_ports" id="sel_dev_gps"/>
+              <input id="baud" list="baudrates" size="6" placeholder="9600"> bit/s
+            </td>
           </tr>
           <tr>
             <td><label>ROVL port</label></td>
@@ -74,12 +81,10 @@
               />
               :
               <input
-                  type="number"
                     id="gcs_port"
-                    min="0"
-                    max="65535"
-                    placeholder="UDP Port"
-                    value="27000"
+                    pattern="0|([1-9]\d*)"
+                    size="5"
+                    placeholder="27000"
               />
             </td>
           </tr>
@@ -94,12 +99,10 @@
               />
             :
             <input
-                    type="number"
                     id="input_rov_port"
-                    min="0"
-                    placeholder="UDP Port"
-                    value="25100"
-                    max="65535"
+                    pattern="0|([1-9]\d*)"
+                    placeholder="25100"
+                    size="5"
             />
             </td>
           </tr>
