@@ -25,7 +25,7 @@ class Api:
             logger.error(str(e))
 
     def get_serial_devices(self):
-        return [cp.device for cp in list_serial_ports()]
+        return [cp.__dict__ for cp in list_serial_ports()]
 
 
 main_html = pkg_resources.resource_filename('bluerov2_usbl', 'web/main.html')

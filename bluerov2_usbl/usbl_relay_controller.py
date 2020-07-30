@@ -200,6 +200,9 @@ class USBLController:
         self._dev_usbl = value
         self._state_change_cb('dev_gps', value)
 
+    def sync_location(self):
+        self.usbl_worker.serial.write(b'D0\r\n')
+
     @property
     def addr_echo(self):
         return None if self._addr_echo is None else '{}:{}'.format(*self._addr_echo)
@@ -278,7 +281,7 @@ class USBLController:
 
         rmc = self._last_rmc
         if rmc is None:
-            logging.info('ignoring RTH message because RMC is not ready yet')
+            logging.info('Ignoring RTH message because RMC is not ready yet')
             return
 
         addr_mav = self._addr_mav

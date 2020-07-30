@@ -100,6 +100,11 @@ If you have issues, check the output of `cerulean-companion` in the terminal
 
 ### Installing From PIP
 
+It is recommended to first make sure your setup tools are up to date:
+```
+python3 -m pip install --upgrade pip setuptools wheel
+```
+
 With python3.6 or later, the following command will install all dependencies locally:
 ```
 pip3 install --user --force-reinstall git+https://github.com/CeruleanSonar/Cerulean-Companion.git
