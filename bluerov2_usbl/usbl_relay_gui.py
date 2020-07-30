@@ -1,6 +1,7 @@
 import json
 import logging
 from functools import wraps
+from pathlib import Path
 
 import pkg_resources
 import webview
@@ -28,7 +29,7 @@ class Api:
 
 
 main_html = pkg_resources.resource_filename('bluerov2_usbl', 'web/main.html')
-window = webview.create_window('USBL controller', url=main_html, js_api=Api())
+window = webview.create_window('USBL controller', Path(main_html), js_api=Api())
 
 
 def js_function(stub: callable):
