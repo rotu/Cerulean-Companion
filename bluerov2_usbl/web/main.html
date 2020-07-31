@@ -34,16 +34,28 @@
         content: "\2026 ";
       }
       li.info {
+        padding-left: 0;
         list-style: none;
       }
       #event_log {
         overflow: scroll;
+      }
+      ul {
+        margin: 0;
+        padding:0;
       }
       div#main {
         display: flex;
 
         flex-flow: column;
         height: 100%;
+      }
+      .event_detail {
+        border-left: 1px solid black;
+        padding-left: 1em;
+        white-space: pre-wrap;
+        font-family: monospace;
+
       }
     </style>
 
@@ -69,7 +81,7 @@
           </tr>
           <tr>
             <td><label>ROVL port</label></td>
-            <td><input type="text" list="serial_ports" id="sel_dev_usbl" /></td>
+            <td><input type="text" list="serial_ports" v-model="rovl_port"  /></td>
           </tr>
           <tr>
             <td><label>GCS address</label></td>
@@ -107,14 +119,16 @@
             </td>
           </tr>
         </table>
-        <button id="connect">Connect</button>
-        <button id="sync">Sync</button>
+        <button v-on:click="connect" v-bind:disabled="is_connected || !gps_port || !rovl_port">Connect</button>
+        <button v-on:click="disconnect"  v-bind:disabled="!is_connected">Disconnect</button>
+        <button v-on:click="sync_location"  v-bind:disabled="!is_connected">Sync</button>
         <hr />
       </div>
       <h2>events</h2>
       <ul id="event_log">
         <li v-for='ev in events' v-bind:class="ev.level">
-          {{ev.level}} : {{ ev.message }}
+          {{ ev.message }}
+          <p class="event_detail">{{ ev.detail }}</p>
         </li>
       </ul>
     </div>

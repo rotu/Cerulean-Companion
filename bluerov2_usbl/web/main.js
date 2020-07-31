@@ -1,4 +1,4 @@
-let data = {
+const data = {
   gps_port: '',
   gps_baud: 9600,
   rovl_port: '',
@@ -13,11 +13,9 @@ let data = {
       9600,
       38400,
       57600,
-  ]
+  ],
+  is_connected: false,
 }
-
-// Elements by id
-els = {};
 
 window.addEventListener("error", (ev) => {
   add_to_log(
@@ -26,8 +24,8 @@ window.addEventListener("error", (ev) => {
   );
 });
 
-function on_python_error(ev) {
-  add_to_log("error", "Python error: " + ev.message + " \r\n\r\n " + ev.stack);
+function on_python_error(err) {
+  add_to_log("error", "Python error: " + err.message , err.stack);
 }
 
 let api = null;
@@ -37,24 +35,41 @@ function init_api() {
     window.setTimeout(init_api, 10);
     return;
   }
+
   api = pywebview.api;
-  api.get_serial_devices().then((devices)=>{
-    console.log(devices);    data.serial_ports=devices}).catch(on_python_error);
+  api.get_serial_devices().then((devices)=>{data.serial_ports=devices}).catch(on_python_error);
 
   window.setInterval(() => {
-    api.get_serial_devices().then(on_list_usb_devices);
+    api.get_serial_devices().then((devices)=>{data.serial_ports=devices}).catch(on_python_error);
   }, 5000);
+
 }
 
 window.addEventListener("load", (event) => {
-  for (let e of document.querySelectorAll("[id]")) {
-    els[e.id] = e;
-  }
   init_api();
 
   new Vue({
     el: '#main',
     data: data,
+    methods: {
+      connect: function(ev){
+        let args = {
+          rovl_port: data.rovl_port,
+          gps_port: data.gps_port,
+          gps_baud: data.gps_baud,
+          addr_gcs: data.gcs_host + ':' + data.gcs_port || 27000,
+          addr_rov: data.rov_host + ':' + data.rov_port || 25100,
+        }
+
+        api.connect(args).then(()=>{data.is_connected=true}).catch(on_python_error)
+      },
+      disconnect: function(ev){
+        api.disconnect().catch(on_python_error)
+      },
+      sync_location: function(ev){
+        api.sync_location().catch(on_python_error)
+      },
+    }
   })
 });
 
@@ -63,12 +78,8 @@ function log_json(record) {
   add_to_log(record.levelname, "[" + record.name + "] " + record.msg);
 }
 
-function add_to_log(level, message) {
+function add_to_log(level, message, detail) {
   data.events.push(
-      {level:level,  message:message}
+      {level:level, message:message, detail:detail}
     )
-}
-
-function on_list_usb_devices(devices) {
-  data.serial_ports = devices
 }

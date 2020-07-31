@@ -3,7 +3,8 @@ import logging
 import os
 import time
 
-from bluerov2_usbl.usbl_relay_controller import list_serial_ports, USBLController
+from bluerov2_usbl.usbl_relay_controller import list_serial_ports, USBLController, usbl_controller_context
+from bluerov2_usbl.usbl_relay_gui import usbl_controller
 
 parser = argparse.ArgumentParser(
     description='Cerulean companion: Listen for a GPS position of a base station '
@@ -37,22 +38,26 @@ def get_serial_device_summary():
     return '\r\n'.join(result)
 
 
-args = parser.parse_args()
+def main():
+    args = parser.parse_args()
 
-if args.rovl is None or args.gps is None:
-    parser.error("GPS and ROVL devices must be specified\n\n" + get_serial_device_summary())
+    if args.rovl is None or args.gps is None:
+        parser.error("GPS and ROVL devices must be specified\n\n" + get_serial_device_summary())
 
-logging.basicConfig(
-    level=args.log.upper(),
-    format='%(threadName)-5s %(levelname)-8s %(message)s'
-)
+    logging.basicConfig(
+        level=args.log.upper(),
+        format='%(threadName)-5s %(levelname)-8s %(message)s'
+    )
+    c = usbl_controller.start(rovl=args.rovl,
+                              gps=args.gps,
+                              echo=args.echo,
+                              mav=args.mav, )
+    try:
+        while True:
+            time.sleep(0.1)
+    finally:
+        c.stop()
 
-c = USBLController()
-c.set_change_callback(lambda key, value: logging.info(f'{key} is now {value}'))
-c.dev_usbl = args.rovl
-c.dev_gps = args.gps
-c.addr_echo = args.echo
-c.addr_mav = args.mav
 
-while True:
-    time.sleep(0.1)
+if __name__ == '__main__':
+    main()

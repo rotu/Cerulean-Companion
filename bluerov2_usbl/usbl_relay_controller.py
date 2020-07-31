@@ -1,6 +1,8 @@
 #!/usr/bin/python3
+import contextlib
 import logging
 import socket
+import time
 import traceback
 from io import RawIOBase
 from math import cos, radians, sin, degrees
@@ -98,9 +100,9 @@ class SerialWorkerThread:
         self.action_queue.put_nowait({'action': 'set_serial_kwargs', 'kwargs': serial_kwargs})
 
     def __init__(
-        self, thread_name: str,
-        on_device_changed: Callable[[Optional[str]], None],
-        on_read_line: Callable[[str], None],
+            self, thread_name: str,
+            on_device_changed: Callable[[Optional[str]], None],
+            on_read_line: Callable[[str], None],
     ):
         self.action_queue = Queue(2)
         self.on_device_changed = on_device_changed
@@ -233,10 +235,9 @@ class USBLController:
 
     @dev_gps.setter
     def dev_gps(self, value):
-
         self.gps_worker.set_serial_kwargs(
             None if value is None else {'port': value, 'baudrate': 4800,
-                'timeout': 0.3})
+                                        'timeout': 0.3})
 
     @property
     def dev_usbl(self):
@@ -290,3 +291,18 @@ class USBLController:
 
         new_rmc = combine_rmc_rth(rmc, rth)
         self._out_udp.sendto(str(new_rmc).encode('ascii') + b'\r\n', addr_mav)
+
+    def start(self, rovl_port, gps_port, gps_baud, addr_gcs, addr_rov):
+        self.dev_usbl = rovl_port
+        self.dev_gps = gps_port
+        #todo: baud
+        self.addr_echo = addr_gcs
+        self.addr_mav = addr_rov
+
+    def stop(self):
+        self.dev_gps = None
+        self.dev_usbl = None
+
+    def destroy(self):
+        self.gps_worker.done()
+        self.usbl_worker.done()
