@@ -4,6 +4,8 @@ import logging
 import socket
 import time
 import traceback
+from collections import ChainMap
+from functools import partial
 from io import RawIOBase
 from math import cos, radians, sin, degrees
 from pathlib import Path
@@ -12,7 +14,8 @@ from threading import Event, Thread
 from typing import Any, Callable, Optional, Tuple
 
 from pynmea2 import ChecksumError, NMEASentence, ParseError, RMC, RTH, SentenceTypeError
-from serial import Serial
+from serial import Serial, serial_for_url
+from serial.threaded import LineReader, ReaderThread
 from serial.tools import list_ports
 
 from bluerov2_usbl.mock_serial import MockSerial
@@ -160,6 +163,27 @@ def list_serial_ports():
     return list(list_ports.comports())
 
 
+class ReaderProtocolFactory(LineReader):
+    line_callback = None
+
+    def __init__(self, line_callback, *args, **kwargs):
+        super().__init__()
+        self.line_callback = line_callback
+
+    def connection_made(self, transport):
+        super().connection_made(transport)
+        logging.info(f'Port opened: {transport.serial.name}')
+
+    def handle_line(self, data):
+        logging.debug('line received: {}\n'.format(repr(data)))
+        self.line_callback(data)
+
+    def connection_lost(self, exc):
+        if exc:
+            traceback.print_exc(exc)
+        logging.info(f'port closed: {self.transport}')
+
+
 class USBLController:
     _addr_echo: Optional[Tuple[str, int]] = None
     _addr_mav: Optional[Tuple[str, int]] = None
@@ -173,26 +197,26 @@ class USBLController:
     def set_change_callback(self, on_state_change: Callable[[str, Any], None]):
         self._state_change_cb = on_state_change
 
-    def __init__(self):
+    def __init__(self, rovl_port, rovl_serial_kwargs,
+                 gps_port, gps_serial_kwargs,
+                 addr_gcs, addr_rov):
+
+        self.addr_echo = addr_gcs
+        self.addr_mav = addr_rov
+
         self._out_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._out_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._out_udp.setblocking(False)
 
-        self._state_change_cb = lambda key, value: None
+        usbl_kwargs = ChainMap(rovl_serial_kwargs, {'baudrate': 115200, 'timeout': 0.3})
+        dev_usbl = MockSerial(rovl_port, **usbl_kwargs)
+        gps_kwargs = ChainMap(gps_serial_kwargs, {'baudrate': 4800, 'timeout': 0.3})
+        dev_gps = MockSerial(gps_port, **gps_kwargs)
 
-        self._close_gps_event = Event()
-        self._close_usbl_event = Event()
-
-        self.usbl_worker = SerialWorkerThread(
-            thread_name='usbl',
-            on_device_changed=self._on_usbl_changed,
-            on_read_line=self._on_usbl_line,
-        )
-        self.gps_worker = SerialWorkerThread(
-            thread_name='gps',
-            on_device_changed=self._on_gps_changed,
-            on_read_line=self._on_gps_line,
-        )
+        self.usbl_worker = ReaderThread(dev_usbl, partial(ReaderProtocolFactory, line_callback=self._on_usbl_line))
+        self.usbl_worker.start()
+        self.gps_worker = ReaderThread(dev_gps, partial(ReaderProtocolFactory, line_callback=self._on_gps_line))
+        self.gps_worker.start()
 
     def _on_usbl_changed(self, value):
         self._dev_usbl = value
@@ -228,26 +252,6 @@ class USBLController:
         else:
             host, port = value.rsplit(':')
             self._addr_mav = (host, int(port))
-
-    @property
-    def dev_gps(self):
-        return self._dev_gps
-
-    @dev_gps.setter
-    def dev_gps(self, value):
-        self.gps_worker.set_serial_kwargs(
-            None if value is None else {'port': value, 'baudrate': 4800,
-                                        'timeout': 0.3})
-
-    @property
-    def dev_usbl(self):
-        return self._dev_usbl
-
-    @dev_usbl.setter
-    def dev_usbl(self, value):
-
-        self.usbl_worker.set_serial_kwargs(None if value is None else {
-            'port': value, 'baudrate': 115200, 'timeout': 0.3})
 
     def _on_gps_line(self, ln):
         addr_echo = self._addr_echo
@@ -292,17 +296,12 @@ class USBLController:
         new_rmc = combine_rmc_rth(rmc, rth)
         self._out_udp.sendto(str(new_rmc).encode('ascii') + b'\r\n', addr_mav)
 
-    def start(self, rovl_port, gps_port, gps_baud, addr_gcs, addr_rov):
-        self.dev_usbl = rovl_port
-        self.dev_gps = gps_port
-        #todo: baud
-        self.addr_echo = addr_gcs
-        self.addr_mav = addr_rov
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
 
     def stop(self):
-        self.dev_gps = None
-        self.dev_usbl = None
-
-    def destroy(self):
-        self.gps_worker.done()
-        self.usbl_worker.done()
+        self.gps_worker.close()
+        self.usbl_worker.close()

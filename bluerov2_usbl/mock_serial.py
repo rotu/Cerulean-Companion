@@ -5,36 +5,52 @@ from io import RawIOBase
 from pathlib import Path
 
 from serial import portNotOpenError
+from serial import SerialBase, SerialException
+import itertools
 
 
-class MockSerial(RawIOBase):
-    def __init__(self, port, **kwargs):
+class MockSerial(SerialBase):
+    data = None
+    looped_data = None
+    position = None
+
+    @property
+    def in_waiting(self):
+        return 1
+
+    def open(self):
         """
         Object which works like a serial port (as much as we can)
         """
-        self.name = port
-        lines = Path(port).read_bytes().splitlines()
-        lines = [b.strip() for b in lines]
-        lines = [b for b in lines if b]
-        self.line_iterator = itertools.cycle(lines)
-        self._closed = False
-        time.sleep(0.1)
+        try:
+            self.position = 0
+            self.data = Path(self.port).read_bytes()
+            self.looped_data = itertools.cycle(self.data)
+            self.is_open = True
+        except Exception as e:
+            raise SerialException from e
 
-    def readline(self, *args, **kwargs):
-        if self.closed:
+    def read(self, size=1):
+        if not self.is_open:
             raise portNotOpenError
-        time.sleep(max(0, random.uniform(-0.2, 0.2)))
-        return next(self.line_iterator) + b'\r\n'
+        time.sleep(0.1*(size-1))
+        return bytes(itertools.islice(self.looped_data, size))
 
-    def readable(self): return True
+    def _reconfigure_port(self):
+        return
 
-    def writable(self): return False
+    def readable(self):
+        return True
 
-    def seekable(self): return False
+    def writable(self):
+        return False
+
+    def seekable(self):
+        return False
 
     @property
     def closed(self):
-        return self._closed
+        return not self.is_open
 
     def close(self, *args, **kwargs):
-        self._closed = True
+        self.is_open = False

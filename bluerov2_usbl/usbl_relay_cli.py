@@ -3,8 +3,8 @@ import logging
 import os
 import time
 
-from bluerov2_usbl.usbl_relay_controller import list_serial_ports, USBLController, usbl_controller_context
-from bluerov2_usbl.usbl_relay_gui import usbl_controller
+from bluerov2_usbl import usbl_relay_controller
+from bluerov2_usbl.usbl_relay_controller import list_serial_ports, USBLController
 
 parser = argparse.ArgumentParser(
     description='Cerulean companion: Listen for a GPS position of a base station '
@@ -48,15 +48,20 @@ def main():
         level=args.log.upper(),
         format='%(threadName)-5s %(levelname)-8s %(message)s'
     )
-    c = usbl_controller.start(rovl=args.rovl,
-                              gps=args.gps,
-                              echo=args.echo,
-                              mav=args.mav, )
+
+    usbl_controller = USBLController(
+        rovl_port=args.rovl,
+        rovl_serial_kwargs={},
+        gps_port=args.gps,
+        gps_serial_kwargs={},
+        addr_gcs=args.echo,
+        addr_rov=args.mav
+    )
     try:
         while True:
             time.sleep(0.1)
     finally:
-        c.stop()
+        usbl_controller.stop()
 
 
 if __name__ == '__main__':

@@ -65,7 +65,7 @@ class Api:
 
 
 main_html = pkg_resources.resource_filename('bluerov2_usbl', 'web/main.html')
-window = webview.create_window('USBL controller', Path(main_html), js_api=Api())
+window = webview.create_window('Cerulean Companion: usbl controller', Path(main_html), js_api=Api())
 
 
 class AppLoggingHandler(logging.Handler):
