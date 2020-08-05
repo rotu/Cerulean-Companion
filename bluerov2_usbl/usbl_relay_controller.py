@@ -89,120 +89,51 @@ def combine_rmc_rth(rmc: RMC, rth: RTH) -> RMC:
     return RMC('GN', 'RMC', new_rmc_data)
 
 
-class SerialWorkerThread:
-    serial: Optional[RawIOBase] = None
-    action_queue: Queue  # [dict]
-    thread: Thread
-
-    def done(self):
-        """Terminate the thread"""
-        self.action_queue.put_nowait({'action': 'done'})
-        self.thread.join()
-
-    def set_serial_kwargs(self, serial_kwargs: Optional[dict]):
-        self.action_queue.put_nowait({'action': 'set_serial_kwargs', 'kwargs': serial_kwargs})
-
-    def __init__(
-            self, thread_name: str,
-            on_device_changed: Callable[[Optional[str]], None],
-            on_read_line: Callable[[str], None],
-    ):
-        self.action_queue = Queue(2)
-        self.on_device_changed = on_device_changed
-        self.on_read_line = on_read_line
-        self.thread = Thread(target=self._run, name=thread_name, daemon=True)
-        self.thread.start()
-
-    def _run(self):
-        while True:
-            try:
-                item = self.action_queue.get(block=True)
-                action = item['action']
-                if action == 'done':
-                    logging.info('worker shutting down')
-                    return
-                if action == 'set_serial_kwargs':
-                    if self.serial is not None:
-                        logging.info('closing device ' + self.serial.name)
-                        self.serial.close()
-                        self.serial = None
-                    kwargs = item['kwargs']
-                    if kwargs is not None:
-                        port = kwargs['port']
-                        logging.info(f'opening device {port}')
-                        if Path(port).is_file():
-                            logging.info(
-                                '(This is a file, not a serial port. Only use this feature for '
-                                'debugging purposes)')
-                            self.serial = MockSerial(**kwargs)
-                        else:
-                            self.serial = Serial(**kwargs)
-                    self.on_device_changed(None if self.serial is None else self.serial.name)
-
-                if self.serial is None:
-                    continue
-                while self.action_queue.qsize() == 0:
-                    ln = self.serial.readline()
-                    if not ln.strip():
-                        continue
-                    ln_str = ln.decode('ascii', 'replace')
-                    try:
-                        self.on_read_line(ln_str)
-                    except Exception as e:
-                        logging.warning(f'when processing data {ln}: {traceback.format_exc()}')
-            except Exception:
-                logging.error(f'Device encountered an error: {traceback.format_exc()}')
-            finally:
-                if self.serial is not None:
-                    self.serial.close()
-                    self.on_device_changed(None)
-                logging.info(f'Closed device')
-
-
 def list_serial_ports():
     return list(list_ports.comports())
 
 
 class ReaderProtocolFactory(LineReader):
-    line_callback = None
+    TERMINATOR = b'\r\n'
+    ENCODING = 'ascii'
 
-    def __init__(self, line_callback, *args, **kwargs):
+    def __init__(self, line_callback, lost_callback):
         super().__init__()
         self.line_callback = line_callback
+        self.lost_callback = lost_callback
 
     def connection_made(self, transport):
         super().connection_made(transport)
         logging.info(f'Port opened: {transport.serial.name}')
 
     def handle_line(self, data):
-        logging.debug('line received: {}\n'.format(repr(data)))
+        logging.debug('line received: {}'.format(repr(data)))
         self.line_callback(data)
 
     def connection_lost(self, exc):
         if exc:
-            traceback.print_exc(exc)
-        logging.info(f'port closed: {self.transport}')
+            logging.error(f'closing port because of an error', exc_info=exc)
+
+        logging.info(f'port closed')
+        self.lost_callback()
 
 
 class USBLController:
     _addr_echo: Optional[Tuple[str, int]] = None
     _addr_mav: Optional[Tuple[str, int]] = None
 
-    _dev_gps: Optional[str] = None
-    _dev_usbl: Optional[str] = None
-
     _last_rmc: Optional[RMC] = None
-    _state_change_cb: Callable[[str, Any], None]
 
-    def set_change_callback(self, on_state_change: Callable[[str, Any], None]):
-        self._state_change_cb = on_state_change
+    _stopping = False
 
-    def __init__(self, rovl_port, rovl_serial_kwargs,
+    def __init__(self,
+                 rovl_port, rovl_serial_kwargs,
                  gps_port, gps_serial_kwargs,
                  addr_gcs, addr_rov):
 
-        self.addr_echo = addr_gcs
-        self.addr_mav = addr_rov
+        self._addr_echo = addr_gcs
+        self._addr_mav = addr_rov
+        self._stop_event = Event()
 
         self._out_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._out_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -210,48 +141,30 @@ class USBLController:
 
         usbl_kwargs = ChainMap(rovl_serial_kwargs, {'baudrate': 115200, 'timeout': 0.3})
         dev_usbl = MockSerial(rovl_port, **usbl_kwargs)
+
         gps_kwargs = ChainMap(gps_serial_kwargs, {'baudrate': 4800, 'timeout': 0.3})
         dev_gps = MockSerial(gps_port, **gps_kwargs)
 
-        self.usbl_worker = ReaderThread(dev_usbl, partial(ReaderProtocolFactory, line_callback=self._on_usbl_line))
+        self.usbl_worker = ReaderThread(
+            dev_usbl,
+            partial(ReaderProtocolFactory,
+                    line_callback=self._on_usbl_line,
+                    lost_callback=self.stop))
+        self.usbl_worker.name = 'ROVL Reader'
         self.usbl_worker.start()
-        self.gps_worker = ReaderThread(dev_gps, partial(ReaderProtocolFactory, line_callback=self._on_gps_line))
+
+        self.gps_worker = ReaderThread(
+            dev_gps,
+            partial(ReaderProtocolFactory,
+                    line_callback=self._on_gps_line,
+                    lost_callback=self.stop)
+        )
+
+        self.gps_worker.name = 'GPS Reader'
         self.gps_worker.start()
-
-    def _on_usbl_changed(self, value):
-        self._dev_usbl = value
-        self._state_change_cb('dev_usbl', value)
-
-    def _on_gps_changed(self, value):
-        self._dev_usbl = value
-        self._state_change_cb('dev_gps', value)
 
     def sync_location(self):
         self.usbl_worker.serial.write(b'D0\r\n')
-
-    @property
-    def addr_echo(self):
-        return None if self._addr_echo is None else '{}:{}'.format(*self._addr_echo)
-
-    @addr_echo.setter
-    def addr_echo(self, value):
-        if not value:
-            self._addr_echo = None
-        else:
-            host, port = value.rsplit(':')
-            self._addr_echo = (host, int(port))
-
-    @property
-    def addr_mav(self):
-        return None if self._addr_mav is None else '{}:{}'.format(*self._addr_mav)
-
-    @addr_mav.setter
-    def addr_mav(self, value):
-        if not value:
-            self._addr_mav = None
-        else:
-            host, port = value.rsplit(':')
-            self._addr_mav = (host, int(port))
 
     def _on_gps_line(self, ln):
         addr_echo = self._addr_echo
@@ -302,6 +215,14 @@ class USBLController:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()
 
+    def join(self):
+        self.gps_worker.join()
+        self.usbl_worker.join()
+
     def stop(self):
-        self.gps_worker.close()
-        self.usbl_worker.close()
+        with contextlib.ExitStack() as stack:
+            self.gps_worker.alive = False
+            self.usbl_worker.alive = False
+
+            stack.callback(self.gps_worker.close)
+            stack.callback(self.usbl_worker.close)

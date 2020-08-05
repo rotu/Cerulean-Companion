@@ -1,9 +1,7 @@
 import argparse
 import logging
 import os
-import time
-
-from bluerov2_usbl import usbl_relay_controller
+import threading
 from bluerov2_usbl.usbl_relay_controller import list_serial_ports, USBLController
 
 parser = argparse.ArgumentParser(
@@ -46,22 +44,24 @@ def main():
 
     logging.basicConfig(
         level=args.log.upper(),
-        format='%(threadName)-5s %(levelname)-8s %(message)s'
+        format='[%(threadName)s]\t%(levelname)s\t%(message)s'
     )
 
-    usbl_controller = USBLController(
-        rovl_port=args.rovl,
-        rovl_serial_kwargs={},
-        gps_port=args.gps,
-        gps_serial_kwargs={},
-        addr_gcs=args.echo,
-        addr_rov=args.mav
-    )
-    try:
-        while True:
-            time.sleep(0.1)
-    finally:
-        usbl_controller.stop()
+    with USBLController(
+            rovl_port=args.rovl,
+            rovl_serial_kwargs={},
+            gps_port=args.gps,
+            gps_serial_kwargs={},
+            addr_gcs=args.echo,
+            addr_rov=args.mav
+    ):
+        try:
+            forever = threading.Event()
+            forever.wait()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            logging.info('Shutting down ROVL Relay...')
 
 
 if __name__ == '__main__':

@@ -1,18 +1,18 @@
 import itertools
-import random
 import time
-from io import RawIOBase
 from pathlib import Path
 
-from serial import portNotOpenError
 from serial import SerialBase, SerialException
-import itertools
+from serial import portNotOpenError
 
 
 class MockSerial(SerialBase):
     data = None
     looped_data = None
     position = None
+
+    def cancel_read(self):
+        pass
 
     @property
     def in_waiting(self):
@@ -24,7 +24,10 @@ class MockSerial(SerialBase):
         """
         try:
             self.position = 0
-            self.data = Path(self.port).read_bytes()
+            lines = Path(self.port).read_bytes().splitlines()
+            # filtern out blank lines
+            lines = [line for line in lines if line]
+            self.data = b''.join(line + b'\r\n' for line in lines if line)
             self.looped_data = itertools.cycle(self.data)
             self.is_open = True
         except Exception as e:
@@ -33,7 +36,7 @@ class MockSerial(SerialBase):
     def read(self, size=1):
         if not self.is_open:
             raise portNotOpenError
-        time.sleep(0.1*(size-1))
+        time.sleep(0.1 * (size - 1))
         return bytes(itertools.islice(self.looped_data, size))
 
     def _reconfigure_port(self):
