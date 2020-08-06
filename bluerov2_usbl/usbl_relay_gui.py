@@ -75,7 +75,7 @@ class AppLoggingHandler(logging.Handler):
 
 logging.basicConfig(
     level='INFO',
-    handlers=[AppLoggingHandler(), logging.StreamHandler()]
+    handlers=[logging.StreamHandler(), AppLoggingHandler()]
 )
 
 webview.start(http_server=True, debug=True)

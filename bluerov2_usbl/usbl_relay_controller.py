@@ -6,11 +6,15 @@ from functools import partial
 from math import cos, radians, sin, degrees
 from typing import Optional, Tuple
 
-from pynmea2 import ChecksumError, NMEASentence, ParseError, RMC, RTH, SentenceTypeError
-from serial.threaded import LineReader, ReaderThread
+import pynmea2
+from serial.threaded import ReaderThread
 from serial.tools import list_ports
 
 from bluerov2_usbl.mock_serial import MockSerial
+from bluerov2_usbl.nmea2_extension import register_nmea_extensions, RTH
+from bluerov2_usbl.serial_nmea_protocol import SerialNMEAProtocol
+
+register_nmea_extensions()
 
 DEFAULT_ROVL_BAUDRATE = 115200
 DEFAULT_GPS_BAUDRATE = 4800
@@ -46,7 +50,7 @@ def degrees_to_sdm(signed_degrees: float) -> (bool, int, float):
 #     return lat_per_meter, lon_per_meter
 #
 
-def combine_rmc_rth(rmc: RMC, rth: RTH) -> RMC:
+def combine_rmc_rth(rmc: pynmea2.RMC, rth: RTH) -> pynmea2.RMC:
     compass_bearing = rth.cb
     slant_range = rth.sr
     true_elevation = rth.te
@@ -81,41 +85,18 @@ def combine_rmc_rth(rmc: RMC, rth: RTH) -> RMC:
         '',
         *rmc.data[8:]
     ]
-    return RMC('GN', 'RMC', new_rmc_data)
+    return pynmea2.RMC('GN', 'RMC', new_rmc_data)
 
 
 def list_serial_ports():
     return list(list_ports.comports())
 
 
-class ReaderProtocolFactory(LineReader):
-    TERMINATOR = b'\r\n'
-    ENCODING = 'ascii'
-
-    def __init__(self, line_callback):
-        super().__init__()
-        self.line_callback = line_callback
-
-    def connection_made(self, transport):
-        super().connection_made(transport)
-        logging.info(f'Port opened: {transport.serial.name}')
-
-    def handle_line(self, data):
-        logging.debug(f'line received: {data!r}')
-        self.line_callback(data)
-
-    def connection_lost(self, exc):
-        if exc:
-            logging.error(f'closing port because of an error', exc_info=exc)
-
-        logging.info(f'port closed')
-
-
 class ROVLController:
     _addr_gcs: Optional[Tuple[str, int]] = None
     _addr_rov: Optional[Tuple[str, int]] = None
 
-    _last_rmc: Optional[RMC] = None
+    _last_rmc: Optional[pynmea2.RMC] = None
 
     _stopping = False
 
@@ -142,44 +123,37 @@ class ROVLController:
 
         self.gps_worker = ReaderThread(
             dev_gps,
-            partial(ReaderProtocolFactory,
-                    line_callback=self._on_gps_line, )
+            partial(SerialNMEAProtocol,
+                    nmea_callback=self._on_gps_sentence, )
         )
         self.gps_worker.name = 'GPS Reader'
         self.gps_worker.start()
 
         self.rovl_worker = ReaderThread(
             dev_usbl,
-            partial(ReaderProtocolFactory,
-                    line_callback=self._on_usbl_line)
+            partial(SerialNMEAProtocol,
+                    nmea_callback=self._on_rovl_sentence)
         )
         self.rovl_worker.name = 'ROVL Reader'
         self.rovl_worker.start()
 
     def sync_location(self):
         logging.info(f'Syncing location of ROVL and GPS...')
-        self.rovl_worker.serial.write(b'D0\r\n')
+        self.rovl_worker.write(b'D0\r\n')
 
-    def _on_gps_line(self, ln):
-        addr_gcs = self._addr_gcs
+    def _send_udp(self, data: bytes, addr: Tuple[str, int]):
         try:
-            if addr_gcs is not None:
-                self._out_udp.sendto(ln.encode(), addr_gcs)
+            self._out_udp.sendto(bytes(data), addr)
         except OSError:
             if not self._stopping:
                 raise
 
-        if ln[3:6] != 'RMC':
-            return
-        try:
-            rmc = NMEASentence.parse(ln)
-        except ChecksumError:
-            logging.debug(f'Ignoring message with bad checksum: {ln}')
-            return
-        except SentenceTypeError:
-            logging.debug(f'Ignoring message with unrecognized sentence type: {ln}')
-            return
-        except ParseError:
+    def _on_gps_sentence(self, rmc):
+        addr_gcs = self._addr_gcs
+        if addr_gcs is not None:
+            self._send_udp(rmc.render(newline=True).encode('ascii'), addr_gcs)
+
+        if rmc.sentence_type != 'RMC':
             return
         if not rmc.is_valid:
             logging.info(f'No GPS fix.')
@@ -187,13 +161,8 @@ class ROVLController:
 
         self._last_rmc = rmc
 
-    def _on_usbl_line(self, ln):
-        if self._stopping:
-            logging.debug(f'Ignoring USBL data. Stopping...')
-            return
-
-        rth = NMEASentence.parse(ln)
-        logging.debug(f'RTH: {ln}')
+    def _on_rovl_sentence(self, rth: pynmea2.NMEASentence):
+        logging.debug(f'RTH: {rth}')
         if rth.sentence_type != 'RTH':
             logging.debug(f'Ignoring unexpected message from USBL. Expected a RTH sentence: {rth}')
             return
@@ -208,7 +177,8 @@ class ROVLController:
             return
 
         new_rmc = combine_rmc_rth(rmc, rth)
-        self._out_udp.sendto(str(new_rmc).encode('ascii') + b'\r\n', addr_rov)
+        logging.info(f'Sending combined RMC message {new_rmc}')
+        self._send_udp(new_rmc.render(newline=True).encode('ascii'), addr_rov)
 
     def __enter__(self):
         return self
