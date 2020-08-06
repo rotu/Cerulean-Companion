@@ -1,24 +1,19 @@
-#!/usr/bin/python3
 import contextlib
 import logging
 import socket
-import time
-import traceback
 from collections import ChainMap
 from functools import partial
-from io import RawIOBase
 from math import cos, radians, sin, degrees
-from pathlib import Path
-from queue import Queue
-from threading import Event, Thread
-from typing import Any, Callable, Optional, Tuple
+from typing import Optional, Tuple
 
 from pynmea2 import ChecksumError, NMEASentence, ParseError, RMC, RTH, SentenceTypeError
-from serial import Serial, serial_for_url
 from serial.threaded import LineReader, ReaderThread
 from serial.tools import list_ports
 
 from bluerov2_usbl.mock_serial import MockSerial
+
+DEFAULT_ROVL_BAUDRATE = 115200
+DEFAULT_GPS_BAUDRATE = 4800
 
 
 def degrees_to_sdm(signed_degrees: float) -> (bool, int, float):
@@ -97,17 +92,16 @@ class ReaderProtocolFactory(LineReader):
     TERMINATOR = b'\r\n'
     ENCODING = 'ascii'
 
-    def __init__(self, line_callback, lost_callback):
+    def __init__(self, line_callback):
         super().__init__()
         self.line_callback = line_callback
-        self.lost_callback = lost_callback
 
     def connection_made(self, transport):
         super().connection_made(transport)
         logging.info(f'Port opened: {transport.serial.name}')
 
     def handle_line(self, data):
-        logging.debug('line received: {}'.format(repr(data)))
+        logging.debug(f'line received: {data!r}')
         self.line_callback(data)
 
     def connection_lost(self, exc):
@@ -115,12 +109,11 @@ class ReaderProtocolFactory(LineReader):
             logging.error(f'closing port because of an error', exc_info=exc)
 
         logging.info(f'port closed')
-        self.lost_callback()
 
 
-class USBLController:
-    _addr_echo: Optional[Tuple[str, int]] = None
-    _addr_mav: Optional[Tuple[str, int]] = None
+class ROVLController:
+    _addr_gcs: Optional[Tuple[str, int]] = None
+    _addr_rov: Optional[Tuple[str, int]] = None
 
     _last_rmc: Optional[RMC] = None
 
@@ -129,47 +122,52 @@ class USBLController:
     def __init__(self,
                  rovl_port, rovl_serial_kwargs,
                  gps_port, gps_serial_kwargs,
-                 addr_gcs, addr_rov):
+                 addr_gcs: Optional[Tuple[str, int]],
+                 addr_rov: Optional[Tuple[str, int]]
+                 ):
 
-        self._addr_echo = addr_gcs
-        self._addr_mav = addr_rov
-        self._stop_event = Event()
+        self._addr_gcs = addr_gcs
+        self._addr_rov = addr_rov
+        self._stopping = False
 
         self._out_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._out_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._out_udp.setblocking(False)
 
-        usbl_kwargs = ChainMap(rovl_serial_kwargs, {'baudrate': 115200, 'timeout': 0.3})
-        dev_usbl = MockSerial(rovl_port, **usbl_kwargs)
+        rovl_kwargs = ChainMap(rovl_serial_kwargs, {'baudrate': DEFAULT_ROVL_BAUDRATE})
+        dev_usbl = MockSerial(rovl_port, **rovl_kwargs)
 
-        gps_kwargs = ChainMap(gps_serial_kwargs, {'baudrate': 4800, 'timeout': 0.3})
+        gps_kwargs = ChainMap(gps_serial_kwargs, {'baudrate': DEFAULT_GPS_BAUDRATE})
         dev_gps = MockSerial(gps_port, **gps_kwargs)
-
-        self.usbl_worker = ReaderThread(
-            dev_usbl,
-            partial(ReaderProtocolFactory,
-                    line_callback=self._on_usbl_line,
-                    lost_callback=self.stop))
-        self.usbl_worker.name = 'ROVL Reader'
-        self.usbl_worker.start()
 
         self.gps_worker = ReaderThread(
             dev_gps,
             partial(ReaderProtocolFactory,
-                    line_callback=self._on_gps_line,
-                    lost_callback=self.stop)
+                    line_callback=self._on_gps_line, )
         )
-
         self.gps_worker.name = 'GPS Reader'
         self.gps_worker.start()
 
+        self.rovl_worker = ReaderThread(
+            dev_usbl,
+            partial(ReaderProtocolFactory,
+                    line_callback=self._on_usbl_line)
+        )
+        self.rovl_worker.name = 'ROVL Reader'
+        self.rovl_worker.start()
+
     def sync_location(self):
-        self.usbl_worker.serial.write(b'D0\r\n')
+        logging.info(f'Syncing location of ROVL and GPS...')
+        self.rovl_worker.serial.write(b'D0\r\n')
 
     def _on_gps_line(self, ln):
-        addr_echo = self._addr_echo
-        if addr_echo is not None:
-            self._out_udp.sendto(ln.encode(), addr_echo)
+        addr_gcs = self._addr_gcs
+        try:
+            if addr_gcs is not None:
+                self._out_udp.sendto(ln.encode(), addr_gcs)
+        except OSError:
+            if not self._stopping:
+                raise
 
         if ln[3:6] != 'RMC':
             return
@@ -183,7 +181,6 @@ class USBLController:
             return
         except ParseError:
             return
-        # logging.info(ln)
         if not rmc.is_valid:
             logging.info(f'No GPS fix.')
             return
@@ -191,23 +188,27 @@ class USBLController:
         self._last_rmc = rmc
 
     def _on_usbl_line(self, ln):
+        if self._stopping:
+            logging.debug(f'Ignoring USBL data. Stopping...')
+            return
+
         rth = NMEASentence.parse(ln)
-        logging.info('RTH: ' + ln)
+        logging.debug(f'RTH: {ln}')
         if rth.sentence_type != 'RTH':
             logging.debug(f'Ignoring unexpected message from USBL. Expected a RTH sentence: {rth}')
             return
 
         rmc = self._last_rmc
         if rmc is None:
-            logging.info('Ignoring RTH message because RMC is not ready yet')
+            logging.info('Ignoring RTH message because we do not yet have a location (RMC message) from the ROVL')
             return
 
-        addr_mav = self._addr_mav
-        if addr_mav is None:
+        addr_rov = self._addr_rov
+        if addr_rov is None:
             return
 
         new_rmc = combine_rmc_rth(rmc, rth)
-        self._out_udp.sendto(str(new_rmc).encode('ascii') + b'\r\n', addr_mav)
+        self._out_udp.sendto(str(new_rmc).encode('ascii') + b'\r\n', addr_rov)
 
     def __enter__(self):
         return self
@@ -215,14 +216,17 @@ class USBLController:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()
 
-    def join(self):
-        self.gps_worker.join()
-        self.usbl_worker.join()
-
     def stop(self):
+        if self._stopping:
+            logging.warning('ROVL controller already stopped')
+            return
+
+        logging.info('Stopping ROVL controller...')
+        self._stopping = True
         with contextlib.ExitStack() as stack:
             self.gps_worker.alive = False
-            self.usbl_worker.alive = False
+            self.rovl_worker.alive = False
 
             stack.callback(self.gps_worker.close)
-            stack.callback(self.usbl_worker.close)
+            stack.callback(self.rovl_worker.close)
+            stack.callback(self._out_udp.close)

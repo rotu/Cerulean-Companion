@@ -1,0 +1,93 @@
+<html>
+<head>
+    <title>USBL Relay</title>
+    <script src="vue.js"></script>
+    <script src="app.js"></script>
+    <link rel="icon"
+          type="image/png"
+          href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="main">
+    <div class="non_event">
+        <fieldset :disabled="is_connected">
+            <legend>Device Settings</legend>
+            <datalist id="serial_ports">
+                <option v-for="item in serial_ports" v-bind:value="item.device"></option>
+            </datalist>
+            <datalist id="serial_baud">
+                <option v-for="item in serial_baud" v-bind:value="item"></option>
+            </datalist>
+            <div>
+                <table id="control_grid">
+                    <tr>
+                        <td><label>GPS port</label></td>
+                        <td>
+                            <input type="text" list="serial_ports" required v-model="gps_port"/>
+                            <input id="gps_baud" list="serial_baud" required v-model="gps_baud" size="7"
+                                   placeholder="default"> bit/s
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><label>ROVL port</label></td>
+                        <td><input type="text" list="serial_ports" v-model="rovl_port"/></td>
+                    </tr>
+                    <tr>
+                        <td><label
+                                title='The address of a Ground Control Station. All output from the GPS will be forwarded '>GCS
+                            address</label></td>
+                        <td>
+                            <input
+                                    placeholder="hostname or IP address"
+                                    v-model="gcs_host"
+                            />
+                            :
+                            <input v-model.number="gcs_port"
+                                   pattern="0|([1-9]\d*)"
+                                   size="5"
+                                   placeholder="27000"
+                            />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><label><abbr title="Remotely Operated Vehicle">ROV</abbr> address</label></td>
+                        <td>
+                            <input v-model="rov_host"
+                                   placeholder="hostname or IP address"
+                                   value="192.168.2.2"
+                            />
+                            :
+                            <input v-model.number="rov_port"
+                                   pattern="0|([1-9]\d*)"
+                                   placeholder="25100"
+                                   size="5"
+                            />
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </fieldset>
+        <template v-if="!is_connected">
+            <button @click="connect" :disabled="is_connected || !gps_port || !rovl_port">Connect</button>
+        </template>
+
+        <template v-if="is_connected">
+            <button @click="sync_location" :disabled="!is_connected">Sync</button>
+            <button @click="disconnect" :disabled="!is_connected">Disconnect</button>
+        </template>
+        <hr/>
+    </div>
+    <fieldset id="event_log_container">
+        <legend>events</legend>
+        <ul id="event_log">
+            <li v-for='ev in events' v-bind:class="ev.level">
+                {{ ev.message }}
+                <p class="event_detail" @created="scroll_to_me">{{ ev.detail }}</p>
+            </li>
+        </ul>
+    </fieldset>
+</div>
+</body>
+</html>

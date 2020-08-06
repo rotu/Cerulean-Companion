@@ -6,7 +6,7 @@ from pathlib import Path
 import pkg_resources
 import webview
 
-from bluerov2_usbl.usbl_relay_controller import USBLController, list_serial_ports
+from bluerov2_usbl.usbl_relay_controller import ROVLController, list_serial_ports
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -33,28 +33,24 @@ def add_to_log(severity, message): ...
 
 
 @js_function
-def on_list_usb_devices(values): ...
-
-
-@js_function
-def on_controller_attr_changed(attr, value): ...
+def on_list_usb_devices(): ...
 
 
 class Api:
     def __init__(self):
-        self.usbl_controller = USBLController()
-        self.usbl_controller.set_change_callback(lambda x, y: None)
+        self.usbl_controller = None
 
     def get_serial_devices(self):
         return [cp.__dict__ for cp in list_serial_ports()]
 
     def connect(self, obj):
-        self.usbl_controller.start(
+        self.usbl_controller = ROVLController(
             rovl_port=obj['rovl_port'],
+            rovl_serial_kwargs={},
             gps_port=obj['gps_port'],
-            gps_baud=obj['gps_baud'],
-            addr_gcs=obj['addr_gcs'],
-            addr_rov=obj['addr_rov'],
+            gps_serial_kwargs={'baudrate': obj['gps_baud']},
+            addr_gcs=(obj['gcs_host'], obj['gcs_port']) if obj['gcs_host'] else None,
+            addr_rov=(obj['rov_host'], obj['rov_port']) if obj['rov_host'] else None,
         )
 
     def disconnect(self):
@@ -64,7 +60,7 @@ class Api:
         self.usbl_controller.sync_location()
 
 
-main_html = pkg_resources.resource_filename('bluerov2_usbl', 'web/main.html')
+main_html = pkg_resources.resource_filename('bluerov2_usbl', 'web/index.html')
 window = webview.create_window('Cerulean Companion: usbl controller', Path(main_html), js_api=Api())
 
 
@@ -78,4 +74,5 @@ logging.basicConfig(
     handlers=[AppLoggingHandler(), logging.StreamHandler()]
 )
 
-webview.start(http_server=True, debug=True)
+webview.start(http_server=True,  # debug=True
+              )

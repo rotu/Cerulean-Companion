@@ -1,4 +1,5 @@
 import itertools
+import logging
 import time
 from pathlib import Path
 
@@ -39,6 +40,9 @@ class MockSerial(SerialBase):
         time.sleep(0.1 * (size - 1))
         return bytes(itertools.islice(self.looped_data, size))
 
+    def write(self, data):
+        logging.debug(f'Pretending to write {data}')
+
     def _reconfigure_port(self):
         return
 
@@ -46,7 +50,7 @@ class MockSerial(SerialBase):
         return True
 
     def writable(self):
-        return False
+        return True
 
     def seekable(self):
         return False

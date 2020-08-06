@@ -1,0 +1,59 @@
+input:invalid {
+    color: red;
+}
+
+li.error::before {
+    content: "! ";
+}
+
+li.error {
+    list-style: none;
+    color: darkred;
+}
+
+li.warning::before {
+    content: "? ";
+}
+
+li.warning {
+    list-style: none;
+    color: darkgoldenrod;
+}
+
+#main {
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+}
+
+#main.non_event {
+    flex-shrink: 0;
+}
+
+li.info::before {
+    content: "\2026 ";
+}
+
+li.info {
+    padding-left: 0;
+    list-style: none;
+}
+
+#event_log_container {
+    flex-grow: 1;
+    overflow: scroll;
+    text-overflow: clip;
+}
+
+ul {
+    margin: 0;
+    padding: 0;
+    overflow: scroll;
+}
+
+.event_detail {
+    border-left: 1px solid black;
+    padding-left: 1em;
+    white-space: pre-wrap;
+    font-family: monospace;
+}
