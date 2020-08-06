@@ -22,6 +22,15 @@ class RTH(pynmea2.TalkerSentence):
         ("AGC Gain in db", "db", float)
     )
 
+    def __init__(self, talker, sentence_type, data):
+        expected_len_data = len(type(self).fields)
+        len_data = len(data)
+        if len_data != expected_len_data:
+            raise pynmea2.ParseError(
+                f'Wrong number of fields. Expected {expected_len_data} but got {len_data}', self.data)
+
+        super().__init__(talker, sentence_type, data)
+
 
 def register_nmea_extensions():
     assert 'RTH' in pynmea2.TalkerSentence.sentence_types
