@@ -17,9 +17,11 @@ const data = {
 };
 
 window.addEventListener("error", (ev) => {
+    let error = ev.error;
     add_to_log(
         "error",
-        "javascript error: " + ev.message + " at " + ev.filename + ":" + ev.lineno
+        "Javascript error: " + error.message,
+        error.stack
     );
 });
 
@@ -90,11 +92,6 @@ window.addEventListener("load", (event) => {
         },
     });
 });
-
-function log_json(record) {
-    console.log("app log", record);
-    add_to_log(record.levelname, "[" + record.name + "] " + record.msg);
-}
 
 function add_to_log(level, message, detail) {
     data.events.push({level: level, message: message, detail: detail});

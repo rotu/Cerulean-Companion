@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 from functools import wraps
 from pathlib import Path
 
@@ -29,7 +30,7 @@ def js_function(stub: callable):
 
 
 @js_function
-def add_to_log(severity, message): ...
+def add_to_log(severity, message, detail): ...
 
 
 @js_function
@@ -48,7 +49,7 @@ class Api:
             rovl_port=obj['rovl_port'],
             rovl_serial_kwargs={},
             gps_port=obj['gps_port'],
-            gps_serial_kwargs={'baudrate': obj['gps_baud']},
+            gps_serial_kwargs={'baudrate': obj['gps_baud']} if obj['gps_baud'] else {},
             addr_gcs=(obj['gcs_host'], obj['gcs_port']) if obj['gcs_host'] else None,
             addr_rov=(obj['rov_host'], obj['rov_port']) if obj['rov_host'] else None,
         )
@@ -66,7 +67,10 @@ window = webview.create_window('Cerulean Companion: usbl controller', Path(main_
 
 class AppLoggingHandler(logging.Handler):
     def emit(self, record: logging.LogRecord):
-        add_to_log(record.levelname.lower(), record.msg)
+        detail = None
+        if record.exc_info:
+            detail = ''.join(traceback.format_exception(*record.exc_info))
+        add_to_log(record.levelname.lower(), record.msg, detail)
 
 
 logging.basicConfig(
@@ -74,5 +78,4 @@ logging.basicConfig(
     handlers=[AppLoggingHandler(), logging.StreamHandler()]
 )
 
-webview.start(http_server=True,  # debug=True
-              )
+webview.start(http_server=True, debug=True)

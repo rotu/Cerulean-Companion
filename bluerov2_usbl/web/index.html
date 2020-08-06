@@ -82,9 +82,9 @@
     <fieldset id="event_log_container">
         <legend>events</legend>
         <ul id="event_log">
-            <li v-for='ev in events' v-bind:class="ev.level">
+            <li v-for='ev in events' @created="scroll_to_me" v-bind:class="ev.level">
                 {{ ev.message }}
-                <p class="event_detail" @created="scroll_to_me">{{ ev.detail }}</p>
+                <p class="event_detail" >{{ ev.detail }}</p>
             </li>
         </ul>
     </fieldset>
